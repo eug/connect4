@@ -175,7 +175,30 @@ def diag_neighbors(state, player, i, j, find_max=True):
     return total_count
 
 
-def score_sum_neighbors_or_win(state):
+def _can_opponent_win(state, opponent, i, j):
+    neighbors = [
+        (i    , j + 1, i + 1, j + 1),
+        (i - 1, j + 1, i    , j + 1),
+        (i - 1, j    , i    , j    ),
+        (i - 1, j - 1, i    , j - 1),
+        (i    , j - 1, i + 1, j - 1)
+    ]
+
+    for _i, _j, _ii, _jj in neighbors:
+        if (_j >= 0 and _j < state.width and _i >= 0 and _i < state.height) and\
+            (state.board[_i][_j] == EMPTY_SLOT):
+            if (_jj >= 0 and _jj < state.width and _ii >= 0 and _ii < state.height) and\
+               (state.board[_ii][_jj] != EMPTY_SLOT):
+                state.board[_i][_j] = opponent
+                result = done(state)
+                state.board[_i][_j] = EMPTY_SLOT
+                if result in (GAME_MAX_WINNER, GAME_MIN_WINNER):
+                    return True
+
+    return False
+        
+
+def score(state):
     max_score = 0
     min_score = 0
     
@@ -186,6 +209,8 @@ def score_sum_neighbors_or_win(state):
                 state.board[i][j] = MAX_PLAYER
                 if done(state) == GAME_MAX_WINNER:
                     max_score += 50
+                elif _can_opponent_win(state, MIN_PLAYER, i, j):
+                    min_score += 50
                 else:
                     max_score += max_row_neighbors(state, MAX_PLAYER, i, j)
                     max_score += max_col_neighbors(state, MAX_PLAYER, i, j)
@@ -194,55 +219,9 @@ def score_sum_neighbors_or_win(state):
                 state.board[i][j] = MIN_PLAYER
                 if done(state) == GAME_MIN_WINNER:
                     min_score += 50
-                else:
-                    min_score += max_row_neighbors(state, MIN_PLAYER, i, j)
-                    min_score += max_col_neighbors(state, MIN_PLAYER, i, j)
-                    min_score += diag_neighbors(state, MIN_PLAYER, i, j, False)
-
-                state.board[i][j] = EMPTY_SLOT
-                break
-
-    return max_score - min_score
-
-def _can_opponent_win(state, opponent, i, j):
-    neighbors = [
-        (i    , j + 1),
-        (i - 1, j + 1),
-        (i - 1, j    ),
-        (i - 1, j - 1),
-        (i    , j - 1)
-    ]
-
-    for _i, _j in neighbors:
-        if _j >= 0 and _j < state.width and _i >= 0 and _i < state.height:
-            state.board[_i][_j] = opponent
-            result = done(state)
-            if result in (GAME_DRAW, GAME_NO_WINNER):
-                return False
-
-    return True
-        
-
-def score_sum_neighbors_or_win_validated(state):
-    max_score = 0
-    min_score = 0
-    
-    for j in range(0, state.width):
-        for i in range(state.height - 1, -1, -1):
-            if state.board[i][j] == EMPTY_SLOT:
-
-                state.board[i][j] = MAX_PLAYER
-                if done(state) == GAME_MAX_WINNER:
+                elif _can_opponent_win(state, MAX_PLAYER, i, j):
                     max_score += 50
-                elif not _can_opponent_win(state, MIN_PLAYER, i, j):
-                        max_score += max_row_neighbors(state, MAX_PLAYER, i, j)
-                        max_score += max_col_neighbors(state, MAX_PLAYER, i, j)
-                        max_score += diag_neighbors(state, MAX_PLAYER, i, j, False)
-
-                state.board[i][j] = MIN_PLAYER
-                if done(state) == GAME_MIN_WINNER:
-                    min_score += 50
-                elif not _can_opponent_win(state, MAX_PLAYER, i, j):
+                else:
                     min_score += max_row_neighbors(state, MIN_PLAYER, i, j)
                     min_score += max_col_neighbors(state, MIN_PLAYER, i, j)
                     min_score += diag_neighbors(state, MIN_PLAYER, i, j, False)
@@ -251,86 +230,6 @@ def score_sum_neighbors_or_win_validated(state):
                 break
 
     return max_score - min_score
-
-
-def score_sum_neighbors(state):
-    max_neighbors = 0
-    min_neighbors = 0
-    
-    for j in range(0, state.width):
-        for i in range(state.height - 1, -1, -1):
-            if state.board[i][j] == EMPTY_SLOT:
-                
-                state.board[i][j] = MAX_PLAYER
-                max_neighbors += max_row_neighbors(state, MAX_PLAYER, i, j)
-                max_neighbors += max_col_neighbors(state, MAX_PLAYER, i, j)
-                max_neighbors += diag_neighbors(state, MAX_PLAYER, i, j, False)
-
-                state.board[i][j] = MIN_PLAYER
-                min_neighbors += max_row_neighbors(state, MIN_PLAYER, i, j)
-                min_neighbors += max_col_neighbors(state, MIN_PLAYER, i, j)
-                min_neighbors += diag_neighbors(state, MIN_PLAYER, i, j, False)
-
-                state.board[i][j] = EMPTY_SLOT
-                break
-
-    return max_neighbors - min_neighbors
-
-def score_max_sequence_or_win(state):
-    max_score = 0
-    min_score = 0
-    
-    for j in range(0, state.width):
-        for i in range(state.height - 1, -1, -1):
-            if state.board[i][j] == EMPTY_SLOT:
-
-                state.board[i][j] = MAX_PLAYER
-                if done(state) == GAME_MAX_WINNER:
-                    max_score = max(50, max_score)
-                else:
-                    max_score = max(max_score, max_row_neighbors(state, MAX_PLAYER, i, j))
-                    max_score = max(max_score, max_col_neighbors(state, MAX_PLAYER, i, j))
-                    max_score = max(max_score, diag_neighbors(state, MAX_PLAYER, i, j))
-
-                state.board[i][j] = MIN_PLAYER
-                if done(state) == GAME_MIN_WINNER:
-                    min_score = max(50, min_score)
-                else:
-                    min_score = max(min_score, max_row_neighbors(state, MIN_PLAYER, i, j))
-                    min_score = max(min_score, max_col_neighbors(state, MIN_PLAYER, i, j))
-                    min_score = max(min_score, diag_neighbors(state, MIN_PLAYER, i, j))
-
-                state.board[i][j] = EMPTY_SLOT
-                break
-
-    return max_score - min_score
-
-def score_max_sequence(state):
-    max_score = 0
-    min_score = 0
-    
-    for j in range(0, state.width):
-        for i in range(state.height - 1, -1, -1):
-            if state.board[i][j] == EMPTY_SLOT:
-                state.board[i][j] = MAX_PLAYER
-                max_score = max(max_score, max_row_neighbors(state, MAX_PLAYER, i, j))
-                max_score = max(max_score, max_col_neighbors(state, MAX_PLAYER, i, j))
-                max_score = max(max_score, diag_neighbors(state, MAX_PLAYER, i, j))
-
-                state.board[i][j] = MIN_PLAYER
-                min_score = max(min_score, max_row_neighbors(state, MIN_PLAYER, i, j))
-                min_score = max(min_score, max_col_neighbors(state, MIN_PLAYER, i, j))
-                min_score = max(min_score, diag_neighbors(state, MIN_PLAYER, i, j))
-
-                state.board[i][j] = EMPTY_SLOT
-                break
-
-    return max_score - min_score
-
-def score_meta(state):
-    if score_max_sequence_or_win(state) == 0:
-        return 0
-    return score_sum_neighbors_or_win(state)
 
 def successor(state, player):
     states = []

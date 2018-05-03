@@ -1,15 +1,16 @@
 import math
-from time import time
 
-from constants import *
+from constants import GAME_NO_WINNER, MAX_PLAYER, MIN_PLAYER
 
 
-def alphabeta(state, max_depth, player, score=None, done=None, successor=None, alpha=-math.inf, beta=math.inf, depth=1):
+def alphabeta(state, max_depth, player, score=None, done=None, successor=None,
+              alpha=-math.inf, beta=math.inf, depth=1):
+    """ Minimax algorithm with Alpha-Beta pruning limited by Depth """
+
     if depth >= max_depth or done(state) != GAME_NO_WINNER:
-        return state, score(state), depth
+        return state, score(state)
 
     s = None
-    d = 0
     kwargs = {'score': score, 'done': done, 'successor': successor}
 
     if player == MAX_PLAYER:
@@ -17,13 +18,12 @@ def alphabeta(state, max_depth, player, score=None, done=None, successor=None, a
         for n in successor(state, player):
 
             kwargs = {**kwargs, **{'alpha': alpha, 'beta': beta, 'depth': depth + 1}}
-            _state, _score, _depth = alphabeta(n, max_depth, MIN_PLAYER, **kwargs)
+            _state, _score = alphabeta(n, max_depth, MIN_PLAYER, **kwargs)
 
             if v < _score:
                 v = _score
                 s = n
 
-            d = max(d, _depth)
             alpha = max(alpha, v)
 
             if beta <= alpha:
@@ -32,19 +32,16 @@ def alphabeta(state, max_depth, player, score=None, done=None, successor=None, a
         v = math.inf
         for n in successor(state, player):
 
-
             kwargs = {**kwargs, **{'alpha': alpha, 'beta': beta, 'depth': depth + 1}}
-            _state, _score, _depth = alphabeta(n, max_depth, MAX_PLAYER, **kwargs)
-
+            _state, _score = alphabeta(n, max_depth, MAX_PLAYER, **kwargs)
             
             if v > _score:
                 v = _score
                 s = n
 
-            d = max(d, _depth)
             beta = min(beta, v)
 
             if beta <= alpha:
                 break
 
-    return s, v, d
+    return s, v
